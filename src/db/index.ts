@@ -27,7 +27,7 @@ export const initiateDB = async () =>{
       description TEXT CHECK(char_length(description)>=20) NOT NULL,
       type VARCHAR(15) CHECK(type IN ('bug','feature_request')),
       status VARCHAR(15) DEFAULT 'open' CHECK(status IN ('open', 'in_progress', 'resolved')),
-      reporter_id INT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      reporter_id INT REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )

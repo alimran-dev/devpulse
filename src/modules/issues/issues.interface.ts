@@ -5,3 +5,9 @@ export interface IIssue{
   status?: "open" | "in_progress" | "resolved";
   reporter_id?: number;
 }
+
+export interface IGetAllIssueQuery{
+  sort?: string;
+  type?: string;
+  status?: string;
+}

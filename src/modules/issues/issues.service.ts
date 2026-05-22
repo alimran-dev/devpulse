@@ -1,17 +1,62 @@
 import { pool } from "../../db";
-import type { IIssue } from "./issues.interface";
+import type { IGetAllIssueQuery, IIssue } from "./issues.interface";
 
-const createIssueIntoDB =async (payload: IIssue) =>{
-  const {title, description, type, reporter_id} = payload;
-  const result = await pool.query(`
+const getAllIssuesFromDB = async (payload: IGetAllIssueQuery) => {
+  let { sort, type, status } = payload;
+  let result = await pool.query(`
+    SELECT * FROM issues
+    ORDER BY created_at ASC
+    `);
+  if (sort === "newest") {
+    result = await pool.query(`
+      SELECT * FROM issues
+      ORDER BY created_at DESC
+      `);
+  }
+  console.log(result.rows);
+  if (type === "bug" || type === "feature_request") {
+    result.rows = result.rows.filter((issue) => issue.type === type);
+  }
+  if (["open", "in_progress", "resolved"].includes(status as string)) {
+    result.rows = result.rows.filter((issue) => issue.status === status);
+  }
+  const current = await Promise.all(
+    result.rows.map(async (row) => {
+      const reporterResult = await pool.query(
+        `
+      SELECT * FROM users
+      WHERE id=$1
+      `,
+        [row.reporter_id],
+      );
+      const reporter = {
+        id: reporterResult.rows[0]?.id,
+        name: reporterResult.rows[0]?.name,
+        role: reporterResult.rows[0]?.role,
+      };
+      // console.log("reporter", reporter);
+      delete row['reporter_id'];
+      return await { ...row, reporter: reporter };
+    }),
+  );
+  // console.log(current);
+  return current;
+};
+
+const createIssueIntoDB = async (payload: IIssue) => {
+  const { title, description, type, reporter_id } = payload;
+  const result = await pool.query(
+    `
     INSERT INTO issues(title, description, type, reporter_id)
     VALUES($1,$2,$3,$4) RETURNING *
-    `, [title, description, type, reporter_id]);
+    `,
+    [title, description, type, reporter_id],
+  );
   console.log(result.rows[0]);
   return result.rows[0];
-}
+};
 
 export const issuesServices = {
+  getAllIssuesFromDB,
   createIssueIntoDB,
-
-}
+};
