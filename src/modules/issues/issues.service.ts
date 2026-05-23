@@ -11,6 +11,9 @@ const getSingleIssueFromDB = async (payload: { id: number }) => {
     `,
     [id],
   );
+  if(issueResult.rows.length===0){
+    throw new Error("Issue not found");
+  }
   const reporterResult = await pool.query(
     `
     SELECT * FROM users
