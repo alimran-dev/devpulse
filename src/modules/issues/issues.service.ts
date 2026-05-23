@@ -1,6 +1,32 @@
 import { pool } from "../../db";
 import type { IGetAllIssueQuery, IIssue } from "./issues.interface";
 
+const getSingleIssueFromDB = async (payload: { id: number }) => {
+  const { id } = payload;
+  const issueResult = await pool.query(
+    `
+    SELECT * FROM issues
+    WHERE id=$1
+    `,
+    [id],
+  );
+  const reporterResult = await pool.query(
+    `
+    SELECT * FROM users
+    WHERE id=$1
+    `,
+    [issueResult.rows[0]?.reporter_id],
+  );
+  const reporter = {
+    id: reporterResult.rows[0].id,
+    name: reporterResult.rows[0]?.name,
+    role: reporterResult.rows[0]?.role,
+  };
+  const result = { ...issueResult.rows[0], reporter: reporter };
+  delete result["reporter_id"];
+  return result;
+};
+
 const getAllIssuesFromDB = async (payload: IGetAllIssueQuery) => {
   let { sort, type, status } = payload;
   let result = await pool.query(`
@@ -35,7 +61,7 @@ const getAllIssuesFromDB = async (payload: IGetAllIssueQuery) => {
         role: reporterResult.rows[0]?.role,
       };
       // console.log("reporter", reporter);
-      delete row['reporter_id'];
+      delete row["reporter_id"];
       return await { ...row, reporter: reporter };
     }),
   );
@@ -57,6 +83,7 @@ const createIssueIntoDB = async (payload: IIssue) => {
 };
 
 export const issuesServices = {
+  getSingleIssueFromDB,
   getAllIssuesFromDB,
   createIssueIntoDB,
 };
