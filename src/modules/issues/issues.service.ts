@@ -1,4 +1,5 @@
 import { pool } from "../../db";
+import type { IUser } from "../auth/auth.interface";
 import type { IGetAllIssueQuery, IIssue } from "./issues.interface";
 
 const getSingleIssueFromDB = async (payload: { id: number }) => {
@@ -82,8 +83,31 @@ const createIssueIntoDB = async (payload: IIssue) => {
   return result.rows[0];
 };
 
+const updateIssueIntoDB = async (payload: IIssue, user: IUser, id: number)=>{
+  const {title, description, type} = payload;
+  const resultIssue = await pool.query(`
+    SELECT * FROM issues
+    WHERE id=$1
+    `,[id]);
+  if(resultIssue.rows.length===0){
+    throw new Error("Issue not available");
+  }
+  const { reporter_id}=resultIssue.rows[0];
+  if(user?.role==="contributor" && reporter_id!==user?.id){
+    throw new Error("Forbidden");
+  }
+  const result = await pool.query(`
+    UPDATE issues
+    SET title=$1, description=$2, type=$3
+    WHERE id=$4
+    RETURNING *
+    `,[title,description,type, id]);
+  return result.rows[0];
+}
+
 export const issuesServices = {
   getSingleIssueFromDB,
   getAllIssuesFromDB,
   createIssueIntoDB,
+  updateIssueIntoDB
 };
